@@ -2,7 +2,8 @@ Feature: Table diffing
   In order to more easily compare data in tables
   step definition writers should be able to diff
   a table with expected data and see the diff inline
-  
+
+  @mri186
   Scenario: Extra row
     Given a standard Cucumber project directory structure
     And a file named "features/tables.feature" with:
