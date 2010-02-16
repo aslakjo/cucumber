@@ -27,6 +27,13 @@ Given /^a file named "([^\"]*)" with:$/ do |file_name, file_content|
   create_file(file_name, file_content)
 end
 
+Given /^that there is no "([^\"]*)" file$/ do |file|
+  if File.exists?(file)
+    FileUtils.rm(file)
+  end  
+end
+
+
 Given /^the following profiles? (?:are|is) defined:$/ do |profiles|
   create_file('cucumber.yml', profiles)
 end
@@ -53,6 +60,11 @@ end
 
 When /^I run rake (.*)$/ do |rake_opts|
   run "rake #{rake_opts} --trace"
+end
+
+When /^I run generate cuke4nuke code$/ do
+  require File.join(cucumber_lib_dir, "cucumber", "language_support", "Cuke4NukeGenerator")
+  Cuke4NukeGenerator.new.generate
 end
 
 Then /^it should (fail|pass)$/ do |success|
