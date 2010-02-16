@@ -1,9 +1,9 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
-require 'cucumber/language_support/Cuke4NukeGenerator'
+require 'cucumber/language_support/cuke_code_generator'
 
-describe Cuke4NukeGenerator do
+describe CukeCodeGenerator do
   before :each do
-    @generator = Cuke4NukeGenerator.new
+    @generator = CukeCodeGenerator.new("i18n_steps.cs.erb")
     @generator.generate
   end
 

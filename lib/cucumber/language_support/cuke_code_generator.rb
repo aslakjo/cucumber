@@ -1,10 +1,11 @@
-class Cuke4NukeGenerator
+class CukeCodeGenerator
   
-  def initialize
+  def initialize(erb_file)
     require 'gherkin'
     require 'erb'
     
     @keywords = []
+    @erb_file = erb_file
   end
 
   def generate
@@ -28,7 +29,7 @@ class Cuke4NukeGenerator
         strip_keyword_of_paranteses! language
         @keywords << [language, given_keyword, when_keyword, then_keyword]
 
-        template = ERB.new(IO.read(File.dirname(__FILE__) + '/i18n_steps.cs.erb'))
+        template = ERB.new(IO.read(File.dirname(__FILE__) + '/' + @erb_file))
         steps += template.result(binding)
         steps += "\n"
     end
@@ -43,8 +44,6 @@ class Cuke4NukeGenerator
   def narative_keywords(language)
     remove_duplication_in_keywords [fetch_keyword_for(language, "given"), fetch_keyword_for(language, "when"), fetch_keyword_for(language, "then")]
   end
-
-
 
   private
   def remove_duplication_in_keywords(keywords)

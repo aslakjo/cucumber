@@ -64,8 +64,8 @@ When /^I run rake (.*)$/ do |rake_opts|
 end
 
 When /^I generate cuke4nuke code$/ do
-  require File.join(cucumber_lib_dir, "cucumber", "language_support", "Cuke4NukeGenerator")
-  @generated_code = Cuke4NukeGenerator.new.generate
+  require File.join(cucumber_lib_dir, "cucumber", "language_support", "cuke_code_generator")
+  @generated_code = CukeCodeGenerator.new("i18n_steps.cs.erb").generate
 end
 
 Then /^the generated code should include "([^\"]*)"$/ do |code|
