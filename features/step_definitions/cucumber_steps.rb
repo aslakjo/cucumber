@@ -63,10 +63,20 @@ When /^I run rake (.*)$/ do |rake_opts|
   run "rake #{rake_opts} --trace"
 end
 
-When /^I run generate cuke4nuke code$/ do
+When /^I generate cuke4nuke code$/ do
   require File.join(cucumber_lib_dir, "cucumber", "language_support", "Cuke4NukeGenerator")
-  Cuke4NukeGenerator.new.generate
+  @generated_code = Cuke4NukeGenerator.new.generate
 end
+
+Then /^the generated code should include "([^\"]*)"$/ do |code|
+  @generated_code.should include(code)
+end
+
+Then /^the generated code should not include "([^\"]*)"$/ do |code|
+  @generated_code.should_not include(code)
+end
+
+
 
 Then /^it should (fail|pass)$/ do |success|
   if success == 'fail'

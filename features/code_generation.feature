@@ -3,11 +3,15 @@ Feature: cucumber codegeneratoin
   Developers should have there attributes generated for them
 
   Scenario: Class def for norwegian
-    Given that there is no "steps.cs" file
-    When I run generate cuke4nuke code
-    Then "steps.cs" should match "public class GittAttribute : GivenAttribute"
+    When I generate cuke4nuke code
+    Then the generated code should include "public class GittAttribute : GivenAttribute"
 
-  Scenario: norwegian step namespace
-    Given that there is no "steps.cs" file
-    When I run generate cuke4nuke code
-    Then "steps.cs" should match "namespace Cuke4Nuke.Framework.Languages.Norwegian"
+  Scenario: Norwegian step namespace
+    When I generate cuke4nuke code
+    Then the generated code should include "namespace Cuke4Nuke.Framework.Languages.Norwegian"
+
+  Scenario: None of the standard keywords should be included
+    When I generate cuke4nuke code
+    Then the generated code should not include "public void Given"
+    And the generated code should not include "public void When"
+    And the generated code should not include "public void Then"

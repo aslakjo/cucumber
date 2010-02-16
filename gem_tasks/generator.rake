@@ -5,6 +5,6 @@ namespace :generate do
   desc "Steps for cuke4nuke / C#"
   task :cuke4nuke do
     require File.join( "lib", "cucumber", "language_support", "Cuke4NukeGenerator")
-    Cuke4NukeGenerator.new.generate
+    Cuke4NukeGenerator.new.write_to_file("steps.cs")
   end
 end
