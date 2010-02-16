@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../../spec_helper'
+require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'yaml'
 
 module Cucumber
@@ -52,19 +52,17 @@ module Cli
         end
       end
 
-      context '-l LANG or --language LANG' do
+      context '--i18n' do
         context "with LANG specified as 'help'" do
           it "lists all known langues" do
-            when_parsing '-l help' do
+            when_parsing '--i18n help' do
+              require 'cucumber/cli/language_help_formatter'
               LanguageHelpFormatter.should_receive(:list_languages).with(output_stream)
             end
           end
           it "exits the program" do
-            when_parsing('--language help') { Kernel.should_receive(:exit) }
+            when_parsing('--i18n help') { Kernel.should_receive(:exit) }
           end
-        end
-        it "sets the langauge" do
-          after_parsing('-l en') { options[:lang].should == 'en' }
         end
       end
 
@@ -85,7 +83,7 @@ module Cli
           after_parsing('-o file.txt') { options[:formats].should == [['pretty', 'file.txt']] }
         end
         it "sets the output for the formatter defined immediatly before it" do
-          after_parsing('-f profile --out file.txt -f pretty -o file2.txt') do 
+          after_parsing('-f profile --out file.txt -f pretty -o file2.txt') do
             options[:formats].should == [['profile', 'file.txt'], ['pretty', 'file2.txt']]
           end
         end
@@ -93,7 +91,11 @@ module Cli
 
       context '-t TAGS --tags TAGS' do
         it "designates tags prefixed with ~ as tags to be excluded" do
-          after_parsing('--tags ~@foo,@bar') { options[:tag_names].should == {'~@foo' => nil, '@bar' => nil} }
+          after_parsing('--tags ~@foo,@bar') { options[:tag_expressions].should == ['~@foo,@bar'] }
+        end
+
+        it "stores tags passed with different --tags seperately" do
+          after_parsing('--tags @foo --tags @bar') { options[:tag_expressions].should == ['@foo', '@bar'] }
         end
       end
 
@@ -160,7 +162,7 @@ module Cli
         it "combines the tag names of both" do
           given_cucumber_yml_defined_as('baz' => %w[-t @bar])
           options.parse!(%w[--tags @foo -p baz])
-          options[:tag_names].should == {'@foo' => nil, '@bar' => nil}
+          options[:tag_expressions].should == ["@foo", "@bar"]
         end
 
         it "only takes the paths from the original options, and disgregards the profiles" do
@@ -217,11 +219,6 @@ module Cli
           options[:snippets].should be_false
           options[:source].should be_false
         end
-
-        it "uses the language from profile when none is specified on the command line" do
-          given_cucumber_yml_defined_as({'foo' => '--language fr'})
-          after_parsing('-p foo') {options[:lang].should == 'fr'}
-        end
       end
 
       context '-P or --no-profile' do
@@ -255,7 +252,7 @@ module Cli
       context '--version' do
         it "displays Cucumber's version" do
           after_parsing('--version') do
-            output_stream.string.should =~ /#{VERSION::STRING}/
+            output_stream.string.should =~ /#{Cucumber::VERSION}/
           end
         end
         it "exits the program" do
@@ -286,7 +283,7 @@ module Cli
 
     describe '#expanded_args_without_drb' do
       it "returns the orginal args in additon to the args from any profiles" do
-        given_cucumber_yml_defined_as('foo' => '-v', 
+        given_cucumber_yml_defined_as('foo' => '-v',
                                       'bar' => '--wip -p baz',
                                       'baz' => '-r some_file.rb')
         options.parse!(%w[features -p foo --profile bar])

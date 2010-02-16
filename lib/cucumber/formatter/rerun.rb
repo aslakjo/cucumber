@@ -1,3 +1,5 @@
+require 'cucumber/formatter/io'
+
 module Cucumber
   module Formatter
     # The formatter used for <tt>--format rerun</tt>
@@ -11,25 +13,33 @@ module Cucumber
     # to run the next time, simply passing the output string on the command line.
     #
     class Rerun
-      def initialize(step_mother, io, options)
-        @io = io
+      include Io
+
+      def initialize(step_mother, path_or_io, options)
+        @io = ensure_io(path_or_io, "rerun")
         @options = options
         @file_names = []
         @file_colon_lines = Hash.new{|h,k| h[k] = []}
       end
 
-      def features(features)
-        super
+      # features() is never executed at all... ?
+      def after_features(features)
         files = @file_names.uniq.map do |file|
           lines = @file_colon_lines[file]
           "#{file}:#{lines.join(':')}"
         end
         @io.puts files.join(' ')
+        
+        # Flusing output to rerun tempfile here...
+        @io.flush
+        @io.close
       end
 
-      def feature_element(feature_element)
+      def before_feature_element(feature_element)
         @rerun = false
-        super
+      end
+
+      def after_feature_element(feature_element)
         if @rerun
           file, line = *feature_element.file_colon_line.split(':')
           @file_colon_lines[file] << line
@@ -38,7 +48,7 @@ module Cucumber
       end
 
       def step_name(keyword, step_match, status, source_indent, background)
-        @rerun = true if [:failed].index(status)
+        @rerun = true if [:failed, :pending, :undefined].index(status)
       end
     end
   end

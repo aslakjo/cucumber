@@ -20,6 +20,15 @@ module Cucumber
     # This will store <tt>[['a', 'b'], ['c', 'd']]</tt> in the <tt>data</tt> variable.
     #
     class Table
+      class Different < StandardError
+        attr_reader :table
+        
+        def initialize(table)
+          super('Tables were not identical')
+          @table = table
+        end
+      end
+      
       include Enumerable
       
       NULL_CONVERSIONS = Hash.new(lambda{ |cell_value| cell_value }).freeze
@@ -30,7 +39,8 @@ module Cucumber
         "table"
       end
 
-      # Creates a new instance. +raw+ should be an Array of Array of String.
+      # Creates a new instance. +raw+ should be an Array of Array of String
+      # or an Array of Hash (similar to what #hashes returns).
       # You don't typically create your own Table objects - Cucumber will do
       # it internally and pass them to your Step Definitions.
       #
@@ -38,6 +48,7 @@ module Cucumber
         @cells_class = Cells
         @cell_class = Cell
 
+        raw = ensure_array_of_array(raw)
         # Verify that it's square
         transposed = raw.transpose
         create_cell_matrix(raw)
@@ -83,7 +94,7 @@ module Cucumber
       def hashes
         @hashes ||= cells_rows[1..-1].map do |row|
           row.to_hash
-        end.freeze
+        end
       end
       
       # Converts this table into a Hash where the first column is
@@ -101,7 +112,7 @@ module Cucumber
       def rows_hash
         return @rows_hash if @rows_hash
         verify_table_width(2)
-        @rows_hash = self.transpose.hashes[0].freeze
+        @rows_hash = self.transpose.hashes[0]
       end
 
       # Gets the raw data of this table. For example, a Table built from
@@ -132,11 +143,26 @@ module Cucumber
       end
 
       def accept(visitor) #:nodoc:
-        return if $cucumber_interrupted
+        return if Cucumber.wants_to_quit
         cells_rows.each do |row|
           visitor.visit_table_row(row)
         end
         nil
+      end
+
+      # Matches +pattern+ against the header row of the table.
+      # This is used especially for argument transforms.
+      #
+      # Example:
+      #  | column_1_name | column_2_name |
+      #  | x             | y             |
+      #
+      #  table.match(/table:column_1_name,column_2_name/) #=> non-nil
+      #  
+      # Note: must use 'table:' prefix on match
+      def match(pattern)
+        header_to_match = "table:#{headers.join(',')}"
+        pattern.match(header_to_match)
       end
 
       # For testing only
@@ -237,7 +263,7 @@ module Cucumber
       # objects in their cells, you may want to use #map_column! before calling
       # #diff!. You can use #map_column! on either of the tables.
       #
-      # An exception is raised if there are missing rows or columns, or
+      # A Different error is raised if there are missing rows or columns, or
       # surplus rows. An error is <em>not</em> raised for surplus columns.
       # Whether to raise or not raise can be changed by setting values in
       # +options+ to true or false:
@@ -316,7 +342,7 @@ module Cucumber
           insert_row_pos  && options[:surplus_row] ||
           missing_col     && options[:missing_col] ||
           surplus_col     && options[:surplus_col]
-        raise 'Tables were not identical' if should_raise
+        raise Different.new(self) if should_raise
       end
 
       def to_hash(cells) #:nodoc:
@@ -370,7 +396,7 @@ module Cucumber
       def headers #:nodoc:
         raw.first
       end
-
+      
       def header_cell(col) #:nodoc:
         cells_rows[0][col]
       end
@@ -384,6 +410,7 @@ module Cucumber
       end
 
       def to_s(options = {}) #:nodoc:
+        require 'cucumber/formatter/pretty'
         options = {:color => true, :indent => 2, :prefixes => TO_S_PREFIXES}.merge(options)
         io = StringIO.new
 
@@ -402,8 +429,8 @@ module Cucumber
       private
 
       TO_S_PREFIXES = Hash.new('    ')
-      TO_S_PREFIXES[:comment]   = ['(+) ']
-      TO_S_PREFIXES[:undefined] = ['(-) ']
+      TO_S_PREFIXES[:comment]   = '(+) '
+      TO_S_PREFIXES[:undefined] = '(-) '
 
       protected
 
@@ -451,7 +478,7 @@ module Cucumber
       def columns #:nodoc:
         @columns ||= cell_matrix.transpose.map do |cell_row|
           @cells_class.new(self, cell_row)
-        end.freeze
+        end
       end
 
       def new_cell(raw_cell, line) #:nodoc:
@@ -500,18 +527,16 @@ module Cucumber
 
       def ensure_table(table_or_array) #:nodoc:
         return table_or_array if Table === table_or_array
-        table_or_array = hashes_to_array(table_or_array) if Hash === table_or_array[0]
-        table_or_array = enumerable_to_array(table_or_array) unless Array == table_or_array[0]
         Table.new(table_or_array)
+      end
+
+      def ensure_array_of_array(array)
+        Hash === array[0] ? hashes_to_array(array) : array
       end
 
       def hashes_to_array(hashes) #:nodoc:
         header = hashes[0].keys
         [header] + hashes.map{|hash| header.map{|key| hash[key]}}
-      end
-
-      def enumerable_to_array(rows) #:nodoc:
-        rows.map{|row| row.map{|cell| cell}}
       end
 
       def ensure_green! #:nodoc:
@@ -538,7 +563,7 @@ module Cucumber
         end
 
         def accept(visitor)
-          return if $cucumber_interrupted
+          return if Cucumber.wants_to_quit
           each do |cell|
             visitor.visit_table_cell(cell)
           end
@@ -551,7 +576,7 @@ module Cucumber
         end
 
         def to_hash #:nodoc:
-          @to_hash ||= @table.to_hash(self).freeze
+          @to_hash ||= @table.to_hash(self)
         end
 
         def value(n) #:nodoc:
@@ -594,7 +619,7 @@ module Cucumber
         end
 
         def accept(visitor)
-          return if $cucumber_interrupted
+          return if Cucumber.wants_to_quit
           visitor.visit_table_cell_value(value, status)
         end
 

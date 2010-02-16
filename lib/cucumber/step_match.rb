@@ -2,8 +2,12 @@ module Cucumber
   class StepMatch #:nodoc:
     attr_reader :step_definition
 
-    def initialize(step_definition, step_name, formatted_step_name, step_arguments)
-      @step_definition, @step_name, @formatted_step_name, @step_arguments = step_definition, step_name, formatted_step_name, step_arguments
+    # Creates a new StepMatch. The +name_to_report+ argument is what's reported, unless it's is,
+    # in which case +name_to_report+ is used instead.
+    # 
+    def initialize(step_definition, name_to_match, name_to_report, step_arguments)
+      raise "name_to_match can't be nil" if name_to_match.nil?
+      @step_definition, @name_to_match, @name_to_report, @step_arguments = step_definition, name_to_match, name_to_report, step_arguments
     end
 
     def args
@@ -11,12 +15,12 @@ module Cucumber
     end
 
     def name
-      @formatted_step_name
+      @name_to_report
     end
 
     def invoke(multiline_arg)
       all_args = args
-      all_args << multiline_arg if multiline_arg
+      all_args << multiline_arg.dup if multiline_arg
       @step_definition.invoke(all_args)
     end
 
@@ -36,26 +40,27 @@ module Cucumber
     #   lambda { |param| "[#{param}]" }
     #
     def format_args(format = lambda{|a| a}, &proc)
-      @formatted_step_name || replace_arguments(@step_name, @step_arguments, format, &proc)
+      @name_to_report || replace_arguments(@name_to_match, @step_arguments, format, &proc)
     end
-    
+
     def file_colon_line
       @step_definition.file_colon_line
     end
 
     def backtrace_line
-      @step_definition.backtrace_line
+      "#{file_colon_line}:in `#{@step_definition.regexp_source}'"
     end
 
     def text_length
-      @step_definition.text_length
+      @step_definition.regexp_source.jlength
     end
 
     def replace_arguments(string, step_arguments, format, &proc)
       s = string.dup
-      offset = 0
+      offset = past_offset = 0
       step_arguments.each do |step_argument|
-        next if step_argument.pos.nil?
+        next if step_argument.byte_offset.nil? || step_argument.byte_offset < past_offset
+        
         replacement = if block_given?
           proc.call(step_argument.val)
         elsif Proc === format
@@ -64,8 +69,9 @@ module Cucumber
           format % step_argument.val
         end
 
-        s[step_argument.pos + offset, step_argument.val.jlength] = replacement
-        offset += replacement.length - step_argument.val.jlength
+        s[step_argument.byte_offset + offset, step_argument.val.length] = replacement
+        offset += replacement.jlength - step_argument.val.jlength
+        past_offset = step_argument.byte_offset + step_argument.val.length
       end
       s
     end

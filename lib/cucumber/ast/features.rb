@@ -23,7 +23,7 @@ module Cucumber
       end
 
       def accept(visitor)
-        return if $cucumber_interrupted
+        return if Cucumber.wants_to_quit
         start = Time.now
         self.each do |feature|
           visitor.visit_feature(feature)
@@ -31,8 +31,8 @@ module Cucumber
         @duration = Time.now - start
       end
 
-      def tag_count(tag)
-        @features.inject(0){|count, feature| count += feature.feature_and_children_tag_count(tag)}
+      def tag_locations(tag)
+        @features.map{|feature| feature.tag_locations(tag)}.flatten
       end
 
     end

@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../../spec_helper'
+require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'treetop'
 require 'cucumber/parser'
 
@@ -6,7 +6,7 @@ module Cucumber
   module Parser
     describe 'Tables' do
       before do
-        @parser = NaturalLanguage.get(StepMother.new, 'en').parser
+        @parser = NaturalLanguage.get(Cucumber::StepMother.new, 'en').parser
       end
       
       after do
@@ -14,7 +14,7 @@ module Cucumber
       end
 
       def parse(text)
-        @parser.__send__(:prepare_to_parse, text)
+        @parser.prepare_to_parse(text)
         @parser.root = :table
         table = @parser._nt_table
         table.raw
@@ -41,11 +41,11 @@ module Cucumber
       end
 
       it "should parse a 2x2 table with empty cells" do
-        parse("| 1 |  |\n|| 4 |\n").should == [['1', nil], [nil, '4']]
+        parse("| 1 |  |\n|| 4 |\n").should == [['1', ''], ['', '4']]
       end
 
       it "should not parse a 2x2 table that isn't closed" do
-        parse("| 1 |  |\n|| 4 ").should_not == [['1', nil], [nil, '4']]
+        parse("| 1 |  |\n|| 4 ").should_not == [['1', ''], ['', '4']]
       end
     end
   end

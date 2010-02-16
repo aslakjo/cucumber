@@ -14,55 +14,37 @@ module Cucumber
         rb.execute_transforms([arg]).first
       end
     
-      attr_writer :__cucumber_step_mother
+      attr_writer :__cucumber_step_mother, :__natural_language
 
       # Call a step from within a step definition. This method is aliased to
       # the same i18n as RbDsl.
       def __cucumber_invoke(name, multiline_argument=nil) #:nodoc:
-        begin
-          step_match = @__cucumber_step_mother.step_match(name)
-          step_match.invoke(multiline_argument)
-        rescue Exception => e
-          e.nested! if Undefined === e
-          raise e
-        end
+        @__cucumber_step_mother.invoke(name, multiline_argument)
       end
 
-      # Returns a Cucumber::Ast::Table for +text_or_table+, which can either
-      # be a String:
-      #
-      #   table(%{
-      #     | account | description | amount |
-      #     | INT-100 | Taxi        | 114    |
-      #     | CUC-101 | Peeler      | 22     |
-      #   })
-      #
-      # or a 2D Array:
-      #
-      #   table([
-      #     %w{ account description amount },
-      #     %w{ INT-100 Taxi        114    },
-      #     %w{ CUC-101 Peeler      22     }
-      #   ])
-      #
+      # See StepMother#invoke_steps
+      def steps(steps_text)
+        @__cucumber_step_mother.invoke_steps(steps_text, @__natural_language)
+      end
+
+      # See StepMother#table
       def table(text_or_table, file=nil, line_offset=0)
-        if Array === text_or_table
-          Ast::Table.new(text_or_table)
-        else
-          @table_parser ||= Parser::TableParser.new
-          @table_parser.parse_or_fail(text_or_table.strip, file, line_offset)
-        end
+        @__cucumber_step_mother.table(text_or_table, file, line_offset)
       end
 
-      # Output +announcement+ alongside the formatted output.
-      # This is an alternative to using Kernel#puts - it will display
-      # nicer, and in all outputs (in case you use several formatters)
-      #
-      # Beware that the output will be printed *before* the corresponding
-      # step. This is because the step itself will not be printed until
-      # after it has run, so it can be coloured according to its status.
+      # See StepMother#py_string
+      def py_string(string_with_triple_quotes, file=nil, line_offset=0)
+        @__cucumber_step_mother.py_string(text_or_table, file, line_offset)
+      end
+
+      # See StepMother#announce
       def announce(announcement)
         @__cucumber_step_mother.announce(announcement)
+      end
+
+      # See StepMother#embed
+      def embed(file, mime_type)
+        @__cucumber_step_mother.embed(file, mime_type)
       end
 
       # Mark the matched step as pending.

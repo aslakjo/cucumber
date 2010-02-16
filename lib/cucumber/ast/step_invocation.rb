@@ -1,4 +1,5 @@
 require 'cucumber/step_match'
+require 'cucumber/ast/table'
 
 module Cucumber
   module Ast
@@ -21,6 +22,7 @@ module Cucumber
       def initialize(step, name, multiline_arg, matched_cells)
         @step, @name, @multiline_arg, @matched_cells = step, name, multiline_arg, matched_cells
         status!(:skipped)
+        @skip_invoke = @exception = @step_match = @different_table = @reported_exception = @background = nil
       end
 
       def background?
@@ -32,13 +34,21 @@ module Cucumber
       end
 
       def accept(visitor)
-        return if $cucumber_interrupted
+        return if Cucumber.wants_to_quit
         invoke(visitor.step_mother, visitor.options)
         visit_step_result(visitor)
       end
 
       def visit_step_result(visitor)
-        visitor.visit_step_result(keyword, @step_match, @multiline_arg, @status, @reported_exception, source_indent, @background)
+        visitor.visit_step_result(
+          keyword,
+          @step_match,
+          (@different_table || @multiline_arg),
+          @status,
+          @reported_exception,
+          source_indent,
+          @background
+        )
       end
 
       def invoke(step_mother, options)
@@ -55,6 +65,10 @@ module Cucumber
           rescue Undefined => e
             failed(options, e, false)
             status!(:undefined)
+          rescue Cucumber::Ast::Table::Different => e
+            @different_table = e.table
+            failed(options, e, false)
+            status!(:failed)
           rescue Exception => e
             failed(options, e, false)
             status!(:failed)
@@ -92,6 +106,9 @@ module Cucumber
 
       def filter_backtrace(e)
         return e if Cucumber.use_full_backtrace
+        pwd = /#{Regexp.escape(Dir.pwd)}\//m
+        (e.backtrace || []).each{|line| line.gsub!(pwd, "./")}
+        
         filtered = (e.backtrace || []).reject do |line|
           BACKTRACE_FILTER_PATTERNS.detect { |p| line =~ p }
         end
@@ -125,7 +142,7 @@ module Cucumber
       end
 
       def actual_keyword
-        repeat_keywords = [language.but_keywords, language.and_keywords].flatten
+        repeat_keywords = [language.but_keywords(false), language.and_keywords(false)].flatten
         if repeat_keywords.index(@step.keyword) && previous
           previous.actual_keyword
         else

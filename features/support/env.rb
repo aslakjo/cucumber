@@ -3,11 +3,7 @@ require 'tempfile'
 require 'spec/expectations'
 require 'fileutils'
 require 'forwardable'
-begin
-  require 'spork'
-rescue Gem::LoadError => ex
-  gem 'spork', '>= 0.5.9' # Ensure correct spork version number to avoid false-negatives.
-end
+require 'cucumber/formatter/unicode'
 
 class CucumberWorld
   extend Forwardable
@@ -39,11 +35,15 @@ class CucumberWorld
 
   # The last standard out, with the duration line taken out (unpredictable)
   def last_stdout
-    strip_duration(@last_stdout)
+    strip_1_9_paths(strip_duration(@last_stdout))
   end
 
   def strip_duration(s)
     s.gsub(/^\d+m\d+\.\d+s\n/m, "")
+  end
+
+  def strip_1_9_paths(s)
+    s.gsub(/#{Dir.pwd}\/examples\/self_test\/tmp/m, ".").gsub(/#{Dir.pwd}\/examples\/self_test/m, ".")
   end
 
   def replace_duration(s, replacement)
@@ -95,6 +95,8 @@ class CucumberWorld
   end
 
   def run_spork_in_background(port = nil)
+    require 'spork'
+
     pid = fork
     in_current_dir do
       if pid
@@ -111,10 +113,8 @@ class CucumberWorld
   end
 
   def terminate_background_jobs
-    if @background_jobs
-      @background_jobs.each do |pid|
-        Process.kill(Signal.list['TERM'], pid)
-      end
+    background_jobs.each do |pid|
+      Process.kill(Signal.list['TERM'], pid)
     end
   end
 

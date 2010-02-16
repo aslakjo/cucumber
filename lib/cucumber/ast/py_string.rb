@@ -17,6 +17,8 @@ module Cucumber
     # Note how the indentation from the source is stripped away.
     #
     class PyString #:nodoc:
+      attr_accessor :file
+
       def self.default_arg_name
         "string"
       end
@@ -31,7 +33,7 @@ module Cucumber
       end
 
       def accept(visitor)
-        return if $cucumber_interrupted
+        return if Cucumber.wants_to_quit
         visitor.visit_py_string(to_s)
       end
       

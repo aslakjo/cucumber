@@ -16,7 +16,7 @@ Feature: Table diffing
       """
     And a file named "features/step_definitions/table_steps.rb" with:
       """
-      Then /the table should be:/ do |expected|
+      Then /the table should be:/ do |expected| x=1
         expected.diff!(table(%{
           | x | y | 
           | a | c |
@@ -33,7 +33,7 @@ Feature: Table diffing
             | x | y |
             | a | b |
             | a | c |
-            Tables were not identical (RuntimeError)
+            Tables were not identical (Cucumber::Ast::Table::Different)
             ./features/step_definitions/table_steps.rb:2:in `/the table should be:/'
             features/tables.feature:3:in `Then the table should be:'
       

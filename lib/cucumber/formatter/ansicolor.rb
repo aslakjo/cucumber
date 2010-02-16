@@ -1,25 +1,24 @@
-gem 'term-ansicolor'
 require 'term/ansicolor'
+require 'cucumber/platform'
+
+if Cucumber::IRONRUBY
+	begin
+		require 'iron-term-ansicolor'
+	rescue LoadError
+		STDERR.puts %{*** WARNING: You must "igem install iron-term-ansicolor" to get coloured ouput in on IronRuby}
+	end
+end
 
 if Cucumber::WINDOWS_MRI
   begin
-    gem 'win32console', '>= 1.2.0'
     require 'Win32/Console/ANSI'
   rescue LoadError
     STDERR.puts %{*** WARNING: You must "gem install win32console" (1.2.0 or higher) to get coloured output on MRI/Windows}
     Term::ANSIColor.coloring = false
   end
-elsif Cucumber::WINDOWS && Cucumber::JRUBY
-  begin
-    gem 'aslakhellesoy-ansicolor', '>= 1.0'
-    require 'ansicolor'
-  rescue LoadError
-    STDERR.puts %{*** WARNING: You must "gem install aslakhellesoy-ansicolor --source http://gems.github.com" (1.0 or higher) to get coloured output on JRuby/Windows}
-    Term::ANSIColor.coloring = false
-  end
 end
 
-Term::ANSIColor.coloring = false if !STDOUT.tty? and not ENV.has_key?("AUTOTEST")
+Term::ANSIColor.coloring = false if !STDOUT.tty? && !ENV.has_key?("AUTOTEST")
 
 module Cucumber
   module Formatter
@@ -137,7 +136,22 @@ module Cucumber
       end
       
       define_grey
-      
+
+      def cukes(n)
+        ("(::) " * n).strip
+      end
+
+      def green_cukes(n)
+        blink(green(cukes(n)))
+      end
+
+      def red_cukes(n)
+        blink(red(cukes(n)))
+      end
+
+      def yellow_cukes(n)
+        blink(yellow(cukes(n)))
+      end
     end
   end
 end

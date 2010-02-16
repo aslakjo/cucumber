@@ -3,7 +3,6 @@ require 'cucumber/rb_support/rb_world'
 require 'cucumber/rb_support/rb_step_definition'
 require 'cucumber/rb_support/rb_hook'
 require 'cucumber/rb_support/rb_transform'
-require 'cucumber/rb_support/regexp_argument_matcher'
 
 module Cucumber
   module RbSupport
@@ -36,8 +35,12 @@ module Cucumber
         @step_mother = step_mother
         @step_definitions = []
         RbDsl.rb_language = self
+        @world_proc = @world_modules = nil
       end
 
+      # Tell the language about other i18n translations so that
+      # they can alias Given, When Then etc. Only useful if the language
+      # has a mechanism for this - typically a dynamic language.
       def alias_adverbs(adverbs)
         adverbs.each do |adverb|
           RbDsl.alias_adverb(adverb)
@@ -45,9 +48,11 @@ module Cucumber
         end
       end
 
-      def step_definitions_for(code_file)
+      # Gets called for each file under features (or whatever is overridden
+      # with --require).
+      def step_definitions_for(rb_file)
         begin
-          load_code_file(code_file)
+          require rb_file # This will cause self.add_step_definition and self.add_hook to be called from RbDsl
           step_definitions
         rescue LoadError => e
           e.message << "\nFailed to load #{code_file}"
@@ -57,17 +62,17 @@ module Cucumber
         end
       end
 
-      def step_matches(step_name, formatted_step_name)
+      def step_matches(name_to_match, name_to_format)
         @step_definitions.map do |step_definition|
-          step_definition.step_match(step_name, formatted_step_name)
+          if(arguments = step_definition.arguments_from(name_to_match))
+            StepMatch.new(step_definition, name_to_match, name_to_format, arguments)
+          else
+            nil
+          end
         end.compact
       end
 
-      def arguments_from(regexp, step_name)
-        @regexp_argument_matcher.arguments_from(regexp, step_name)
-      end
-
-      def snippet_text(step_keyword, step_name, multiline_arg_class = nil)
+      def snippet_text(step_keyword, step_name, multiline_arg_class)
         escaped = Regexp.escape(step_name).gsub('\ ', ' ').gsub('/', '\/')
         escaped = escaped.gsub(PARAM_PATTERN, ESCAPED_PARAM_PATTERN)
 
@@ -83,13 +88,13 @@ module Cucumber
           multiline_class_comment = "# #{multiline_arg_class.default_arg_name} is a #{multiline_arg_class.to_s}\n  "
         end
 
-        "#{step_keyword} /^#{escaped}$/ do#{block_arg_string}\n  #{multiline_class_comment}pending\nend"
+        "#{step_keyword} /^#{escaped}$/ do#{block_arg_string}\n  #{multiline_class_comment}pending # express the regexp above with the code you wish you had\nend"
       end
 
-      def begin_rb_scenario
+      def begin_rb_scenario(scenario)
         create_world
         extend_world
-        connect_world
+        connect_world(scenario)
       end
 
       def register_rb_hook(phase, tag_names, proc)
@@ -116,13 +121,13 @@ module Cucumber
       end
 
       def load_code_file(code_file)
-        require code_file # This will cause self.add_step_definition, self.add_hook, and self.add_transform to be called from RbDsl
+        require File.expand_path(code_file) # This will cause self.add_step_definition, self.add_hook, and self.add_transform to be called from RbDsl
       end
 
       protected
 
-      def begin_scenario
-        begin_rb_scenario
+      def begin_scenario(scenario)
+        begin_rb_scenario(scenario)
       end
       
       def end_scenario
@@ -151,8 +156,9 @@ module Cucumber
         end
       end
 
-      def connect_world
+      def connect_world(scenario)
         @current_world.__cucumber_step_mother = @step_mother
+        @current_world.__natural_language = scenario.language
       end
 
       def check_nil(o, proc)

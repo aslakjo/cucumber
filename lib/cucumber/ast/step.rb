@@ -18,6 +18,11 @@ module Cucumber
         false
       end
 
+      def status
+        # Step always has status skipped, because Step is always in a ScenarioOutline
+        :skipped
+      end
+
       def step_invocation
         StepInvocation.new(self, @name, @multiline_arg, [])
       end
@@ -33,7 +38,7 @@ module Cucumber
       end
 
       def accept(visitor)
-        return if $cucumber_interrupted
+        return if Cucumber.wants_to_quit
         # The only time a Step is visited is when it is in a ScenarioOutline.
         # Otherwise it's always StepInvocation that gets visited instead.
         visit_step_result(visitor, first_match(visitor), @multiline_arg, :skipped, nil, nil)
@@ -107,7 +112,7 @@ module Cucumber
         name_with_arguments_replaced = @name
         argument_hash.each do |name, value|
           value ||= ''
-          name_with_arguments_replaced = name_with_arguments_replaced.gsub(name, value) if value
+          name_with_arguments_replaced = name_with_arguments_replaced.gsub(name, value)
         end
         name_with_arguments_replaced
       end

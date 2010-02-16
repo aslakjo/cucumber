@@ -7,12 +7,11 @@ Feature: Exception in AfterStep Block
     Given a standard Cucumber project directory structure
     And a file named "features/step_definitions/steps.rb" with:
       """
-      Given /^this step does something naughty$/ do
+      Given /^this step does something naughty$/ do x=1
         @naughty = true
       end
 
-      Given /^this step works$/ do
-      end
+      Given(/^this step works$/) do; end
       """
     And a file named "features/support/env.rb" with:
       """
@@ -24,7 +23,6 @@ Feature: Exception in AfterStep Block
       end
       """
 
-  @mri186
   Scenario: Handle Exception in standard scenario step and carry on
     Given a file named "features/naughty_step_in_scenario.feature" with:
       """
@@ -58,7 +56,6 @@ Feature: Exception in AfterStep Block
 
       """
 
-  @mri186
   Scenario: Handle Exception in scenario outline table row and carry on
     Given a file named "features/naughty_step_in_scenario_outline.feature" with:
       """
